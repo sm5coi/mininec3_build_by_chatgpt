@@ -211,6 +211,7 @@ void MininecImpedanceSolver::computePsiGauss(
     outT1 = T1;
     outT2 = T2;
     int onodig = 0;
+    int onodig1 = 0;
 }
 
 
