@@ -292,32 +292,61 @@ void MininecImpedanceSolver::computePsiGauss(
 }
 
 // -------------------------------------------------------------
-// GOSUB 87 – skalärpotential-psi
+// GOSUB 87 – skalärpotential-psi med short-formel för self-term
 // -------------------------------------------------------------
 void MininecImpedanceSolver::psiScalarKernel(
     int I, int J,
     double P1, double P2, double P3, int P4,
     double& T1, double& T2) const
 {
-    (void)I; (void)J;
     double FVS  = 1.0;
     char   Cmod = 'Y';
+
+    // --- Short-formel: self-term, liten radie ---
+    // Motsvarar MININEC-rader 87–93.
+    // Här approximerar vi villkoren till: "samma segment" och "tunn tråd".
+    if (I == J && g_.A[P4] <= srm_) {
+        double S = g_.S[P4];
+        double logSa = std::log(S / g_.A[P4]);
+
+        T1 = 2.0 * logSa;   // realdel
+        T2 = -w_ * S;       // imagdel
+
+        return;
+    }
+
+    // --- Annars: full Gauss + kernel28 ---
     computePsiGauss(true, I, J, P1, P2, P3, P4, FVS, Cmod, T1, T2);
 }
 
+
 // -------------------------------------------------------------
-// GOSUB 102 – vektorpotential-psi
+// GOSUB 102 – vektorpotential-psi med short-formel för self-term
 // -------------------------------------------------------------
 void MininecImpedanceSolver::psiVectorKernel(
     int I, int J,
     double P1, double P2, double P3, int P4,
     double& T1, double& T2) const
 {
-    (void)I; (void)J;
     double FVS  = 1.0;
     char   Cmod = 'Y';
+
+    // --- Short-formel: self-term, liten radie ---
+    // Motsvarar MININEC-rader 102–108.
+    if (I == J && g_.A[P4] <= srm_) {
+        double S = g_.S[P4];
+        double logSa = std::log(S / g_.A[P4]);
+
+        T1 = logSa;         // realdel
+        T2 = -w_ * S / 2.0; // imagdel
+
+        return;
+    }
+
+    // --- Annars: full Gauss + kernel28 ---
     computePsiGauss(false, I, J, P1, P2, P3, P4, FVS, Cmod, T1, T2);
 }
+
 
 // -------------------------------------------------------------
 // gradPhiContribution – enkel, stabil grad(Φ) längs segment I
