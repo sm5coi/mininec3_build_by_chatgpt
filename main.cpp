@@ -299,6 +299,7 @@ int main() {
     MininecImpedanceSolver solver(geom, k, srm);
 
     ImpedanceMatrix Z(geom.N);
+
     solver.build(Z);
 
     for (int i = 1; i <= geom.N; ++i) {

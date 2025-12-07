@@ -42,6 +42,7 @@ struct Geometry {
     std::vector<std::array<int,2>> C;
     // W[puls] motsvarar W%(I): vilken tråd pulsen I ligger på
     std::vector<int> W;
+
     // J2[wire][0/1] motsvarar J2(W,1/2): första/sista nod på tråd
     std::vector<std::array<int,2>> J2;
 };
@@ -93,6 +94,7 @@ private:
 // -------------------------------------------------------------
 class MininecImpedanceSolver {
 public:
+    double W2;
     // k = vågtal = 2*pi / lambda
     // srm = SRM i BASIC ("small radius"-gräns)
     MininecImpedanceSolver(const Geometry& geom, double k, double srm);
@@ -129,10 +131,29 @@ private:
     // GOSUB 87/102: PSI(P1,P2,P3) = T1 + j*T2
     // scalar = true => GOSUB 87 (skalärpotential)
     // scalar = false => GOSUB 102 (vektorpotential)
-    void psiImpedanceKernel(bool scalar,
+
+    inline int baseP1(int I) const
+    {
+        return 2 * g_.W[I] + I - 1;
+    };
+
+    inline int baseP2(int J) const
+    {
+        return 2 * g_.W[J] + J - 1;
+    };
+
+
+    void psiImpedanceKernel(
+        int I, int J,
+        double& outRe, double& outIm) const;
+
+
+/*
+        void psiImpedanceKernel(bool scalar,
                             int I, int J,
                             int P1, int P2, int P3, int P4,
                             double& T1, double& T2) const;
+*/
 
     // Grad(Φ)-delen (rader 274–312) för ett givet I,J
     void scalarGradientContribution(int I, int J,

@@ -40,6 +40,7 @@ MininecImpedanceSolver::MininecImpedanceSolver(
     pi_(std::acos(-1.0))
 {
     initConstants();
+    W2 = 0;
 }
 
 void MininecImpedanceSolver::initConstants() {
@@ -210,9 +211,13 @@ void MininecImpedanceSolver::computePsiGauss(
 
     outT1 = T1;
     outT2 = T2;
-    int onodig = 0;
-    int onodig1 = 0;
 }
+// From ChatGPT:
+// Det här är direkt motsvarighet till MININEC:
+//   * Geometridelen (S(M), S(U)-S(M), S(V)-S(M))
+//   * Gauss-delen (168–178) med Q(L)
+//   * kernel28 med elliptisk “exact kernel” via ks.I6
+//  *  slutlig skalning med S4 och +I6.
 
 
 
@@ -271,6 +276,7 @@ void MininecImpedanceSolver::computePsiGauss(
 // // OBS: här är "exact kernel"-kriterierna förenklade något.
 // // -------------------------------------------------------------
 */
+
 // New version 2025-12-02
 
 void MininecImpedanceSolver::kernel28(
@@ -388,7 +394,124 @@ KernelSetup MininecImpedanceSolver::setupKernelI6(
     return ks;
 }
 
+// inline int MininecImpedanceSolver::baseP1(int I) const
+// {
+//     return 2 * g_.W[I] + I - 1;
+// }
 
+// inline int MininecImpedanceSolver::baseP2(int J) const
+// {
+//     return 2 * g_.W[J] + J - 1;
+// }
+
+
+
+void MininecImpedanceSolver::psiImpedanceKernel(
+    int I, int J,
+    double& outRe, double& outIm) const
+{
+    outRe = 0.0;
+    outIm = 0.0;
+
+    //----------------------------------------------------------------------
+    // 0. Hämta geometri för puls J
+    //----------------------------------------------------------------------
+    int J1 = std::abs(g_.C[J][0]);     // segment lower
+    int J2 = std::abs(g_.C[J][1]);     // segment upper
+
+    double F4 = (g_.C[J][0] >= 0 ? 1.0 : -1.0);
+    double F5 = (g_.C[J][1] >= 0 ? 1.0 : -1.0);
+
+    // F6,F7 uttrycker för MININEC hur z-komponenten speglas i jordplan
+    double F6 = 1.0;
+    double F7 = 1.0;
+
+    int G = g_.G;        // earth image flag
+    double k = k_;       // wave number
+
+    //----------------------------------------------------------------------
+    // 1. Observationens tangentvektor T5,T6,T7  (som i originalet)
+    //----------------------------------------------------------------------
+    int I1 = std::abs(g_.C[I][0]);
+    double sI1 = (g_.C[I][0] >= 0 ? 1.0 : -1.0);
+
+    double T5 = g_.CA[I1] * g_.S[I1] * sI1;
+    double T6 = g_.CB[I1] * g_.S[I1] * sI1;
+    double T7 = g_.CG[I1] * g_.S[I1] * sI1;
+
+    //----------------------------------------------------------------------
+    // 2. Jordplansloop: img = +1 (verklig antenn) och ev. -1 (spegel)
+    //----------------------------------------------------------------------
+    for (int img = 1 - (G - 1); img <= 1; img += 2)
+    {
+        //------------------------------------------------------------------
+        // A) Vektorpotentialens bidrag (rad 247–272 i BASIC)
+        //------------------------------------------------------------------
+        double U1 = 0.0, U2 = 0.0;
+        double V1 = 0.0, V2 = 0.0;
+        double T1 = 0.0, T2 = 0.0;
+
+        // Bestäm grund-P för observation och källa
+        double P1 = baseP1(I);     // OBS: vi använder img längre fram om du vill spegla I
+        double P2 = baseP2(J);
+        double P3 = P2 + 0.5;
+        int    P4 = J2;
+
+        //
+        // ψ(M, N, N+½) → U1,U2
+        //
+        psiVectorKernel(I, J, P1, P2, P3, P4, T1, T2);
+        U1 = F5 * T1;
+        U2 = F5 * T2;
+
+        //
+        // ψ(M, N–½, N) → V1,V2
+        //
+        P3 = P2;
+        P2 = P2 - 0.5;
+        P4 = J1;
+
+        psiVectorKernel(I, J, P1, P2, P3, P4, T1, T2);
+        V1 = F4 * T1;
+        V2 = F4 * T2;
+
+        //------------------------------------------------------------------
+        // Projektion som i rad 262–272
+        //------------------------------------------------------------------
+        double X3 = U1 * g_.CA[J2] + V1 * g_.CA[J1];
+        double Y3 = U1 * g_.CB[J2] + V1 * g_.CB[J1];
+        double Z3 = (F7 * U1 * g_.CG[J2] + F6 * V1 * g_.CG[J1]) * k;
+
+        double D1 = g_.W2 * (X3 * T5 + Y3 * T6 + Z3 * T7);
+
+        X3 = U2 * g_.CA[J2] + V2 * g_.CA[J1];
+        Y3 = U2 * g_.CB[J2] + V2 * g_.CB[J1];
+        Z3 = (F7 * U2 * g_.CG[J2] + F6 * V2 * g_.CG[J1]) * k;
+
+        double D2 = g_.W2 * (X3 * T5 + Y3 * T6 + Z3 * T7);
+
+        //------------------------------------------------------------------
+        // B) grad(Φ)-delen (rad 274–311)
+        //------------------------------------------------------------------
+        double gradRe = 0.0, gradIm = 0.0;
+
+        computeScalarGradient(
+            I, J,
+            J1, J2,
+            F4, F5, F6, F7, g_.F8[J],
+            U1, U2,
+            gradRe, gradIm
+            );
+
+        //------------------------------------------------------------------
+        // C) Ackumulera totalbidraget från denna jordplansbild
+        //------------------------------------------------------------------
+        outRe += D1 + gradRe;
+        outIm += D2 + gradIm;
+    }
+}
+
+/*
 void MininecImpedanceSolver::psiImpedanceKernel(
     bool scalar,
     int I, int J,
@@ -424,106 +547,10 @@ void MininecImpedanceSolver::psiImpedanceKernel(
 
     computePsiGauss(scalar, I, J, P1, P2, P3,  P4, FVS,  Cmode, T1, T2 );
 
-/*
-        // ----- S(M) i (X1,Y1,Z1) -----
-    double X1, Y1, Z1;
-    if (scalar) {
-        // 94–99: mittpunkt av segment P1
-        int I4 = static_cast<int>(P1);
-        int I5 = I4 + 1;
-        X1 = 0.5 * (g_.X[I4] + g_.X[I5]);
-        Y1 = 0.5 * (g_.Y[I4] + g_.Y[I5]);
-        Z1 = 0.5 * (g_.Z[I4] + g_.Z[I5]);
-    } else {
-        // 109–111: nod P1
-        X1 = g_.X[P1];
-        Y1 = g_.Y[P1];
-        Z1 = g_.Z[P1];
-    }
-
-    // ----- S(U)-S(M) i (X2,Y2,Z2)  (113–123) -----
-    double X2, Y2, Z2;
-    int I4 = static_cast<int>(P2);
-    if (I4 != P2) {
-        int I5 = I4 + 1;
-        X2 = 0.5 * (g_.X[I4] + g_.X[I5]) - X1;
-        Y2 = 0.5 * (g_.Y[I4] + g_.Y[I5]) - Y1;
-        Z2 = k_ * 0.5 * (g_.Z[I4] + g_.Z[I5]) - Z1;
-    } else {
-        X2 = g_.X[P2] - X1;
-        Y2 = g_.Y[P2] - Y1;
-        Z2 = k_ * g_.Z[P2] - Z1;
-    }
-
-    // ----- S(V)-S(M) i (V1,V2,V3) (124–133) -----
-    double V1, V2, V3;
-    I4 = static_cast<int>(P3);
-    if (I4 != P3) {
-        int I5 = I4 + 1;
-        V1 = 0.5 * (g_.X[I4] + g_.X[I5]) - X1;
-        V2 = 0.5 * (g_.Y[I4] + g_.Y[I5]) - Y1;
-        V3 = k_ * 0.5 * (g_.Z[I4] + g_.Z[I5]) - Z1;
-    } else {
-        V1 = g_.X[P3] - X1;
-        V2 = g_.Y[P3] - Y1;
-        V3 = k_ * g_.Z[P3] - Z1;
-    }
-
-    // ----- D0, D3, A2, S4 (135–143) -----
-    double D0 = X2*X2 + Y2*Y2 + Z2*Z2;
-    if (D0 > 0) D0 = std::sqrt(D0);
-    double D3 = V1*V1 + V2*V2 + V3*V3;
-    if (D3 > 0) D3 = std::sqrt(D3);
-
-    double A2 = g_.A[P4] * g_.A[P4];
-    double S4 = (P3 - P2) * g_.S[P4];
-
-    double FVS = 1.0;
-    char Cmode = 'Y';
-
-    KernelSetup ks = setupKernelI6(
-        I, J,
-        P2, P3, P4,
-        D0, D3, S4,
-        FVS,    // 1 för impedans (GOSUB 87), annat vid behov
-        Cmode   // t.ex. 'Y' för "tillåt exact kernel"
-        );
-
-
-    // ----- Gaussordning L (145–167, förenklad) -----
-    T1 = 0.0;
-    T2 = 0.0;
-
-    double T = (D0 + D3) / g_.S[P4];
-
-    if (T > 6.0)  ks.L = 3;
-    if (T > 10.0) ks.L = 1;
-    int I5 = ks.L + ks.L;
-
-    // ----- Gauss-kvadratur (168–178) -----
-    while (true) {
-        double T3 = 0.0;
-        double T4 = 0.0;
-
-        T = (Q_[ks.L] + 0.5) / ks.F2;
-        kernel28(T3, T4, X2, Y2, Z2, V1, V2, V3, T, P4, A2, ks.I6);
-
-        T = (0.5 - Q_[ks.L]) / ks.F2;
-        kernel28(T3, T4, X2, Y2, Z2, V1, V2, V3, T, P4, A2, ks.I6);
-
-        ks.L += 1;
-        T1 += Q_[ks.L] * T3;
-        T2 += Q_[ks.L] * T4;
-        ks.L += 1;
-        if (ks.L >= I5) break;
-    }
-
-    T1 = S4 * (T1 + ks.I6);
-    T2 = S4 * T2;
-
-*/
 
 }
+
+*/
 
 // -------------------------------------------------------------
 // Grad(Φ)-bidrag för ett I,J (rader 273–312), lätt förenklad
@@ -549,13 +576,13 @@ void MininecImpedanceSolver::scalarGradientContribution(
     int P4 = J2;
 
     // 283 GOSUB 87
-    psiImpedanceKernel(true, I, J, P1, P2, P3, P4, T1, T2);
+    psiImpedanceKernel( I, J, T1, T2);
     U5 = T1;
     U6 = T2;
 
     // psi(M-1/2, N, N+1)
     P1 = P1_base - 1;
-    psiImpedanceKernel(true, I, J, P1, P2, P3, P4, T1, T2);
+    psiImpedanceKernel( I, J, T1, T2);
     U1 = (U5 - T1) / g_.S[J2];
     U2 = (U6 - T2) / g_.S[J2];
 
@@ -566,13 +593,13 @@ void MininecImpedanceSolver::scalarGradientContribution(
         P3 = P2_base;
         P4 = J1;
 
-        psiImpedanceKernel(true, I, J, P1, P2, P3, P4, T1, T2);
+        psiImpedanceKernel( I, J, T1, T2);
         U3 = T1;
         U4 = T2;
 
         // psi(M-1/2, N-1, N)
         P1 = P1_base - 1;
-        psiImpedanceKernel(true, I, J, P1, P2, P3, P4, T1, T2);
+        psiImpedanceKernel( I, J, T1, T2);
 
         U3 = (U3 - T1) / g_.S[J1];
         U4 = (U4 - T2) / g_.S[J1];
