@@ -166,6 +166,11 @@ private:
         int I, int J,
         double& outRe, double& outIm) const;
 
+    // ⬇⬇⬇ Lägg till denna rad:
+    void gradPhiContribution(
+        int I, int J,
+        double& gRe, double& gIm) const;
+
     // Initierar Q[] och C[] enligt DATA-raderna
     void initConstants();
 };

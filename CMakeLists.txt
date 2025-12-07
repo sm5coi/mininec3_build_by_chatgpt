@@ -16,6 +16,9 @@ add_executable(mininec_build_simple_geometry
   main.cpp
   GeometryModel.cpp mininec.cpp
   GeometryModel.hpp mininec.hpp
+  solveZmtx.cpp
+
+  solveZmtx.hpp
 )
 target_link_libraries(mininec_build_simple_geometry PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 

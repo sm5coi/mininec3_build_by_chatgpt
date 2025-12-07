@@ -1,4 +1,5 @@
 #include "mininec.hpp"
+#include "solveZmtx.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -50,7 +51,7 @@ int main()
 {
     // Exempel: 11-segments vertikal tråd, 1 m lång, radie 1 mm
     int    Nseg = 11;
-    double L    = 1.0;
+    double L    = 15.0;
     double a    = 0.001;
     double freq = 10e6;   // 10 MHz
     double c0   = 299792458.0;
@@ -66,6 +67,16 @@ int main()
     solver.build(Z);
 
     std::cout << "Z-matris (" << Nseg << "x" << Nseg << ")\n";
+
+    int feedSeg = Nseg / 2 + 1;  // mittsegmentet (t.ex. segment 6 av 11)
+    auto Zin = computeInputImpedance(Z, feedSeg);
+
+    std::cout << "\nInimpedans i segment " << feedSeg << ":\n";
+    std::cout << "Zin = " << Zin.real()
+              << (Zin.imag() >= 0 ? " + j" : " - j")
+              << std::abs(Zin.imag()) << " ohm\n";
+
+
     std::cout << std::fixed << std::setprecision(3);
 
     for (int i = 1; i <= Nseg; ++i) {
