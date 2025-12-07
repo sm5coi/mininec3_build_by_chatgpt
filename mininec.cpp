@@ -416,9 +416,12 @@ void MininecImpedanceSolver::psiImpedanceKernel(
     double gRe = 0.0, gIm = 0.0;
     gradPhiContribution(I, J, gRe, gIm);
 
-    // Enkel kombination: Z ∝ k * (scalar + vector + gradPhi)
-    outRe = k_ * (T1s + T1v + gRe);
-    outIm = k_ * (T2s + T2v + gIm);
+    // MININEC-lik normalisering: Z ∝ W2 * k * (scalar + vector + gradPhi)
+    double scale = W2_ * k_;
+
+    outRe = scale * (T1s + T1v + gRe);
+    outIm = scale * (T2s + T2v + gIm);
+
 }
 
 
