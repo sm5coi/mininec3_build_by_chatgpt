@@ -14,10 +14,12 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 add_executable(mininec_build_simple_geometry
   main.cpp
-  GeometryModel.cpp mininec.cpp
-  GeometryModel.hpp mininec.hpp
+  mininec.cpp
+  mininec.hpp
   solveZmtx.cpp
   solveZmtx.hpp
+  geometry.hpp
+  geometry.cpp
 )
 target_link_libraries(mininec_build_simple_geometry PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 

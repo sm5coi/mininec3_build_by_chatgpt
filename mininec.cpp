@@ -1,6 +1,9 @@
 #include "mininec.hpp"
 #include <iostream>
 
+
+
+
 MininecImpedanceSolver::MininecImpedanceSolver(
     const Geometry& geom,
     double k, double srm)

@@ -3,49 +3,7 @@
 #include <iostream>
 #include <iomanip>
 
-// Bygg en enkel vertikal tråd längs z-axeln
-// med Nseg segment, längd L, radie a.
-// G = 1: fri rymd, G = 2: perfekt jordplan (ej utnyttjad i denna version).
-Geometry buildSimpleVerticalWire(int Nseg, double L, double a, int G = 1)
-{
-    Geometry g;
-    g.N = Nseg;
-    g.G = G;
 
-    int Nnodes = Nseg + 1;
-    g.X.assign(Nnodes + 1, 0.0);
-    g.Y.assign(Nnodes + 1, 0.0);
-    g.Z.assign(Nnodes + 1, 0.0);
-
-    double dz = L / Nseg;
-    for (int n = 1; n <= Nnodes; ++n) {
-        g.X[n] = 0.0;
-        g.Y[n] = 0.0;
-        g.Z[n] = (n - 1) * dz;
-    }
-
-    g.A.assign(Nseg + 1, a);
-    g.S.assign(Nseg + 1, dz);
-    g.CA.assign(Nseg + 1, 0.0);
-    g.CB.assign(Nseg + 1, 0.0);
-    g.CG.assign(Nseg + 1, 1.0); // längs z
-
-    g.C.assign(Nseg + 1, {0,0});
-    g.W.assign(Nseg + 1, 1);
-    g.J2.assign(2, {0,0}); // wire-index 1..1
-
-    // Puls I = segment I (1..Nseg)
-    for (int I = 1; I <= Nseg; ++I) {
-        g.C[I][0] = I;   // "nedre" segmentindex
-        g.C[I][1] = I;   // "övre" segmentindex (förenklat lika)
-        g.W[I]     = 1;  // alla pulser på tråd 1
-    }
-
-    g.J2[1][0] = 1;         // första nod på tråd 1
-    g.J2[1][1] = Nnodes;    // sista nod
-
-    return g;
-}
 
 int main()
 {
@@ -59,7 +17,28 @@ int main()
     double k     = 2.0 * std::acos(-1.0) / lambda;
     double srm   = a * 2.0;  // enkel SRM-sättning
 
-    Geometry geom = buildSimpleVerticalWire(Nseg, L, a, 1);
+    //Geometry geom = buildSimpleVerticalWire(Nseg, L, a, 1);
+
+    Geometry geom;
+
+    // Lägg till noder
+    geom.X = {0, 0, 0,  0, 5};
+    geom.Y = {0, 0, 0,  0, 0};
+    geom.Z = {0, 0,10, 10,10};
+
+    // Wire1: vertikal (nod1 → nod2)
+    geom.wires.push_back({1, 2, 0.001, 10});
+
+    // Wire2: horisontell höger (nod2 → nod3)
+    geom.wires.push_back({2, 3, 0.001, 5});
+
+    // Wire3: horisontell vänster (nod2 → nod4)
+    geom.wires.push_back({2, 4, 0.001, 5});
+
+    // Generera segment och geometri
+    geom.buildSegments();
+
+    Nseg = geom.N;
 
     MininecImpedanceSolver solver(geom, k, srm);
     ImpedanceMatrix Z(Nseg);

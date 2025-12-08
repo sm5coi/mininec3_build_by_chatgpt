@@ -2,11 +2,12 @@
 #define MININEC_HPP
 
 #include <vector>
-#include <array>
+//#include <array>
 #include <complex>
-#include <stdexcept>
+//#include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include "geometry.hpp"
 
 // -------------------------------------------------------------
 // Kernel-setup: motsvarar I6!-logiken i BASIC
@@ -15,37 +16,6 @@ struct KernelSetup {
     double F2;  // F2 i BASIC
     int    L;   // Gauss-ordning (1, 3 eller 7)
     double I6;  // I6! i BASIC (0 => ingen exact kernel)
-};
-
-// -------------------------------------------------------------
-// 1-baserad geometri (som i MININEC)
-// Alla vektorer ska ha storlek >= maxIndex+1, index 0 ignoreras.
-// -------------------------------------------------------------
-struct Geometry {
-    int N = 0;   // antal pulser (segment)
-    int G = 1;   // antal "images" (1 = fri rymd, 2 = perfekt jordplan)
-
-    // Nodpunkter (1..MS)
-    std::vector<double> X;
-    std::vector<double> Y;
-    std::vector<double> Z;
-
-    // Segment-egenskaper (1..MS-1)
-    std::vector<double> A;   // radie
-    std::vector<double> CA;  // cos(alpha)
-    std::vector<double> CB;  // cos(beta)
-    std::vector<double> CG;  // cos(gamma)
-    std::vector<double> S;   // segmentlängd
-
-    // Kopplingar (pulser -> segment)
-    // C[puls][0/1] motsvarar C%(I,1/2) (nedre/övre segmentindex)
-    std::vector<std::array<int,2>> C;
-
-    // W[puls] motsvarar W%(I): vilken tråd pulsen I ligger på
-    std::vector<int> W;
-
-    // J2[wire][0/1] motsvarar J2(W,1/2): första/sista nod på tråd
-    std::vector<std::array<int,2>> J2;
 };
 
 // -------------------------------------------------------------

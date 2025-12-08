@@ -1,7 +1,5 @@
 #include "solveZmtx.hpp"
 
-
-
 // Lös A x = b med Gauss-elimination (utan superavancerad pivotering)
 // A ändras in-place. Returnerar lösning i x.
 std::vector<std::complex<double>> solveLinearSystem(
