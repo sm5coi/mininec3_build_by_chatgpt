@@ -3,42 +3,64 @@
 
 #include <vector>
 #include <array>
-// #include <complex>
-// #include <stdexcept>
-// #include <algorithm>
-#include <cmath>
 
-// -------------------------------------------------------------
-// 1-baserad geometri (som i MININEC)
-// Alla vektorer ska ha storlek >= maxIndex+1, index 0 ignoreras.
-// -------------------------------------------------------------
 struct Wire {
-    int startNode;    // node index
-    int endNode;      // node index
-    double radius;    // wire radius
-    int segments;     // number of segments
+    int startNode;
+    int endNode;
+    double radius;
+    int segments;
 };
 
-struct Geometry {
-    int N = 0;  // total number of segments
-    int G; // used in buildSimpleVerticalWire()
+class Geometry
+{
+public:
+    // ===== Factory / builders =====
+    static Geometry buildSimpleVerticalWire(
+        int Nseg,
+        double L,
+        double a,
+        int G = 1
+        );
 
-    std::vector<double> X, Y, Z;         // nodes
-    std::vector<Wire> wires;             // wires
+    // ===== Read-only API =====
+    int segmentCount() const { return N_; }
 
-    // Per-segment data:
-    std::vector<std::array<int,2>> C;    // lower/higher node
-    std::vector<int> W;                  // segment→wire index
-    std::vector<double> A;               // radius per segment
-    std::vector<double> S;               // length per segment
-    std::vector<double> CA, CB, CG;      // direction cosines
+    // ===== Data access (const) =====
+    const std::vector<double>& X()  const { return X_; }
+    const std::vector<double>& Y()  const { return Y_; }
+    const std::vector<double>& Z()  const { return Z_; }
 
-    // Per-wire:
-    std::vector<std::array<int,2>> J2;   // first/last node of wire
+    const std::vector<Wire>& wires() const { return wires_; }
+
+    const std::vector<std::array<int,2>>& C()  const { return C_; }
+    const std::vector<int>& W()   const { return W_; }
+    const std::vector<double>& A() const { return A_; }
+    const std::vector<double>& S() const { return S_; }
+    const std::vector<double>& CA() const { return CA_; }
+    const std::vector<double>& CB() const { return CB_; }
+    const std::vector<double>& CG() const { return CG_; }
+
+    const std::vector<std::array<int,2>>& J2() const { return J2_; }
+
+private:
+    Geometry() = default;
 
     void buildSegments();
 
-    Geometry buildSimpleVerticalWire(int Nseg, double L, double a, int G = 1);
+    // ===== Internal data =====
+    int N_ = 0;
+    int G_ = 0;
+
+    std::vector<double> X_, Y_, Z_;
+    std::vector<Wire> wires_;
+
+    std::vector<std::array<int,2>> C_;
+    std::vector<int> W_;
+    std::vector<double> A_;
+    std::vector<double> S_;
+    std::vector<double> CA_, CB_, CG_;
+
+    std::vector<std::array<int,2>> J2_;
 };
 
 #endif // GEOMETRY_HPP

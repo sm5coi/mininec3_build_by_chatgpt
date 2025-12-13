@@ -72,7 +72,7 @@ void MininecImpedanceSolver::kernel28(
     double D3 = X3*X3 + Y3*Y3 + Z3*Z3;
     double D;
 
-    if (g_.A[P4] <= srm_) {
+    if (g_.A()[P4] <= srm_) {
         D = std::sqrt(D3);
     } else {
         D = D3 + A2;
@@ -94,7 +94,7 @@ void MininecImpedanceSolver::kernel28(
         double ratio = D3 / (64.0 * A2);
         if (ratio < eps) ratio = eps;
 
-        T3 += (V0 + std::log(ratio) / 2.0) / (pi_ * g_.A[P4]) - 1.0 / std::max(D, eps);
+        T3 += (V0 + std::log(ratio) / 2.0) / (pi_ * g_.A()[P4]) - 1.0 / std::max(D, eps);
     }
 
     // ----- exp(-j*k*R)/R-delen (alltid) -----
@@ -124,19 +124,19 @@ KernelSetup MininecImpedanceSolver::setupKernelI6(
     ks.I6 = 0.0;   // ingen exact kernel som standard
 
     // Litet avstånd => kandidat för exact kernel
-    double T = (D0 + D3) / g_.S[P4];
+    double T = (D0 + D3) / g_.S()[P4];
 
     // Vi tillåter exact kernel om T <= 1.1 och Cmode != 'N'
     if (T <= 1.1 && Cmode != 'N') {
         // 1) Hämta vilka trådar puls I och J ligger på
-        int wi = g_.W[I];   // W%(I) i BASIC
-        int wj = g_.W[J];   // W%(J)
+        int wi = g_.W()[I];   // W%(I) i BASIC
+        int wj = g_.W()[J];   // W%(J)
 
         // 2) Hämta respektive wires första/sista nod (J2(wire,1/2))
-        int wi_1 = g_.J2[wi][0];
-        int wi_2 = g_.J2[wi][1];
-        int wj_1 = g_.J2[wj][0];
-        int wj_2 = g_.J2[wj][1];
+        int wi_1 = g_.J2()[wi][0];
+        int wi_2 = g_.J2()[wi][1];
+        int wj_1 = g_.J2()[wj][0];
+        int wj_2 = g_.J2()[wj][1];
 
         // 3) Kollar om trådarna delar någon ändpunkt
         bool sameEnd =
@@ -150,7 +150,7 @@ KernelSetup MininecImpedanceSolver::setupKernelI6(
 
             // a) Mycket liten radie => specialfall med slutna formler (87/102)
             //    vi signalerar detta med L=0, så computePsiGauss kan hoppa över Gauss.
-            if (g_.A[P4] <= srm_) {
+            if (g_.A()[P4] <= srm_) {
                 ks.L  = 0;      // "ingen numerisk kernel", använd short formula istället
                 ks.F2 = 1.0;
                 ks.I6 = 0.0;
@@ -162,8 +162,8 @@ KernelSetup MininecImpedanceSolver::setupKernelI6(
                 ks.F2 = 2.0 * (P3 - P2);
 
                 // I6! = (1 - LOG(S4 / F2 / 8 / A(P4))) / (pi * A(P4))
-                ks.I6 = (1.0 - std::log(S4 / (ks.F2 * 8.0 * g_.A[P4])))
-                        / (pi_ * g_.A[P4]);
+                ks.I6 = (1.0 - std::log(S4 / (ks.F2 * 8.0 * g_.A()[P4])))
+                        / (pi_ * g_.A()[P4]);
 
                 // L är kvar = 7 (full Gauss)
                 return ks;
@@ -204,15 +204,15 @@ void MininecImpedanceSolver::computePsiGauss(
         // Mittpunkt av segment P1 => nod P1 och P1+1
         int i4 = static_cast<int>(P1);
         int i5 = i4 + 1;
-        X1 = 0.5 * (g_.X[i4] + g_.X[i5]);
-        Y1 = 0.5 * (g_.Y[i4] + g_.Y[i5]);
-        Z1 = 0.5 * (g_.Z[i4] + g_.Z[i5]);
+        X1 = 0.5 * (g_.X()[i4] + g_.X()[i5]);
+        Y1 = 0.5 * (g_.Y()[i4] + g_.Y()[i5]);
+        Z1 = 0.5 * (g_.Z()[i4] + g_.Z()[i5]);
     } else {
         // nod P1
         int i1 = static_cast<int>(P1);
-        X1 = g_.X[i1];
-        Y1 = g_.Y[i1];
-        Z1 = g_.Z[i1];
+        X1 = g_.X()[i1];
+        Y1 = g_.Y()[i1];
+        Z1 = g_.Z()[i1];
     }
 
     // 2) S(U)-S(M)
@@ -220,13 +220,13 @@ void MininecImpedanceSolver::computePsiGauss(
     int i4 = static_cast<int>(P2);
     if (i4 != static_cast<int>(P2)) {
         int i5 = i4 + 1;
-        X2 = 0.5 * (g_.X[i4] + g_.X[i5]) - X1;
-        Y2 = 0.5 * (g_.Y[i4] + g_.Y[i5]) - Y1;
-        Z2 = 0.5 * (g_.Z[i4] + g_.Z[i5]) - Z1;
+        X2 = 0.5 * (g_.X()[i4] + g_.X()[i5]) - X1;
+        Y2 = 0.5 * (g_.Y()[i4] + g_.Y()[i5]) - Y1;
+        Z2 = 0.5 * (g_.Z()[i4] + g_.Z()[i5]) - Z1;
     } else {
-        X2 = g_.X[i4] - X1;
-        Y2 = g_.Y[i4] - Y1;
-        Z2 = g_.Z[i4] - Z1;
+        X2 = g_.X()[i4] - X1;
+        Y2 = g_.Y()[i4] - Y1;
+        Z2 = g_.Z()[i4] - Z1;
     }
 
     // 3) S(V)-S(M)
@@ -234,20 +234,20 @@ void MininecImpedanceSolver::computePsiGauss(
     i4 = static_cast<int>(P3);
     if (i4 != static_cast<int>(P3)) {
         int i5 = i4 + 1;
-        V1 = 0.5 * (g_.X[i4] + g_.X[i5]) - X1;
-        V2 = 0.5 * (g_.Y[i4] + g_.Y[i5]) - Y1;
-        V3 = 0.5 * (g_.Z[i4] + g_.Z[i5]) - Z1;
+        V1 = 0.5 * (g_.X()[i4] + g_.X()[i5]) - X1;
+        V2 = 0.5 * (g_.Y()[i4] + g_.Y()[i5]) - Y1;
+        V3 = 0.5 * (g_.Z()[i4] + g_.Z()[i5]) - Z1;
     } else {
-        V1 = g_.X[i4] - X1;
-        V2 = g_.Y[i4] - Y1;
-        V3 = g_.Z[i4] - Z1;
+        V1 = g_.X()[i4] - X1;
+        V2 = g_.Y()[i4] - Y1;
+        V3 = g_.Z()[i4] - Z1;
     }
 
     // 4) D0, D3, S4
     double D0 = std::sqrt(X2*X2 + Y2*Y2 + Z2*Z2);
     double D3 = std::sqrt(V1*V1 + V2*V2 + V3*V3);
-    double S4 = std::fabs(P3 - P2) * g_.S[P4];
-    double A2 = g_.A[P4] * g_.A[P4];
+    double S4 = std::fabs(P3 - P2) * g_.S()[P4];
+    double A2 = g_.A()[P4] * g_.A()[P4];
 
     // 5) Kernel-setup
     KernelSetup ks = setupKernelI6(
@@ -308,9 +308,9 @@ void MininecImpedanceSolver::psiScalarKernel(
     // --- Short-formel: self-term, liten radie ---
     // Motsvarar MININEC-rader 87–93.
     // Här approximerar vi villkoren till: "samma segment" och "tunn tråd".
-    if (I == J && g_.A[P4] <= srm_) {
-        double S = g_.S[P4];
-        double logSa = std::log(S / g_.A[P4]);
+    if (I == J && g_.A()[P4] <= srm_) {
+        double S = g_.S()[P4];
+        double logSa = std::log(S / g_.A()[P4]);
 
         T1 = 2.0 * logSa;   // realdel
         T2 = -w_ * S;       // imagdel
@@ -336,9 +336,9 @@ void MininecImpedanceSolver::psiVectorKernel(
 
     // --- Short-formel: self-term, liten radie ---
     // Motsvarar MININEC-rader 102–108.
-    if (I == J && g_.A[P4] <= srm_) {
-        double S = g_.S[P4];
-        double logSa = std::log(S / g_.A[P4]);
+    if (I == J && g_.A()[P4] <= srm_) {
+        double S = g_.S()[P4];
+        double logSa = std::log(S / g_.A()[P4]);
 
         T1 = logSa;         // realdel
         T2 = -w_ * S / 2.0; // imagdel
@@ -363,7 +363,7 @@ void MininecImpedanceSolver::gradPhiContribution(
     gIm = 0.0;
 
     // Kräver att observationssegmentet har både föregående och nästa segment
-    if (I <= 1 || I >= g_.N) {
+    if (I <= 1 || I >= g_.segmentCount()) {
         return; // Ingen central differens möjlig vid ändsegment → 0-bidrag
     }
 
@@ -383,7 +383,7 @@ void MininecImpedanceSolver::gradPhiContribution(
     double P1minus = static_cast<double>(I - 1);
     psiScalarKernel(I, J, P1minus, P2, P3, P4, psiMinusRe, psiMinusIm);
 
-    double ds = g_.S[I]; // segmentlängd för I
+    double ds = g_.S()[I]; // segmentlängd för I
 
     gRe = (psiPlusRe  - psiMinusRe)  / (2.0 * ds);
     gIm = (psiPlusIm  - psiMinusIm)  / (2.0 * ds);
@@ -432,7 +432,7 @@ void MininecImpedanceSolver::psiImpedanceKernel(
 // Bygg impedansmatrisen genom att anropa psiImpedanceKernel
 // -------------------------------------------------------------
 void MininecImpedanceSolver::build(ImpedanceMatrix& Z) const {
-    const int N = g_.N;
+    const int N = g_.segmentCount();
     if (N <= 0) {
         throw std::runtime_error("Geometry.N must be > 0");
     }

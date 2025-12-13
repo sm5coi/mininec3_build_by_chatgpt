@@ -1,97 +1,54 @@
 #include "geometry.hpp"
+#include <cmath>
 
+Geometry Geometry::buildSimpleVerticalWire(int Nseg, double L, double a, int G)
+{
+    Geometry geom;
+    geom.G_ = G;
+
+    // 1-baserad nodlista
+    geom.X_ = {0.0, 0.0};
+    geom.Y_ = {0.0, 0.0};
+    geom.Z_ = {0.0, L};
+
+    geom.wires_.push_back({
+        1, 2, a, Nseg
+    });
+
+    geom.buildSegments();
+    return geom;
+}
 
 void Geometry::buildSegments()
 {
-    N = 0;
-    C.clear();
-    W.clear();
-    A.clear();
-    S.clear();
-    CA.clear();
-    CB.clear();
-    CG.clear();
-    J2.clear();
+    N_ = 0;
 
-    J2.resize(wires.size()+1);
+    for (size_t w = 0; w < wires_.size(); ++w) {
+        const Wire& wire = wires_[w];
 
-    for (int w = 1; w <= (int)wires.size(); ++w) {
-        const Wire& Ww = wires[w-1];
-        int n1 = Ww.startNode;
-        int n2 = Ww.endNode;
+        int n1 = wire.startNode;
+        int n2 = wire.endNode;
+        int ns = wire.segments;
 
-        J2[w][0] = n1;
-        J2[w][1] = n2;
+        double dx = (X_[n2] - X_[n1]) / ns;
+        double dy = (Y_[n2] - Y_[n1]) / ns;
+        double dz = (Z_[n2] - Z_[n1]) / ns;
 
-        double dx = X[n2] - X[n1];
-        double dy = Y[n2] - Y[n1];
-        double dz = Z[n2] - Z[n1];
+        J2_.push_back({N_ + 1, N_ + ns});
 
-        double L = std::sqrt(dx*dx + dy*dy + dz*dz);
-        double segLen = L / Ww.segments;
+        for (int i = 0; i < ns; ++i) {
+            ++N_;
 
-        double ca = dx / L;
-        double cb = dy / L;
-        double cg = dz / L;
+            C_.push_back({n1, n2});
+            W_.push_back(static_cast<int>(w) + 1);
+            A_.push_back(wire.radius);
 
-        for (int s = 0; s < Ww.segments; ++s) {
-            ++N;
-            W.push_back(w);
+            double len = std::sqrt(dx*dx + dy*dy + dz*dz);
+            S_.push_back(len);
 
-            int nodeLow  = N * 2 - 1;     // eller gör separat nodtabell
-            int nodeHigh = N * 2;
-
-            C.push_back({nodeLow, nodeHigh});
-
-            A.push_back(Ww.radius);
-            S.push_back(segLen);
-            CA.push_back(ca);
-            CB.push_back(cb);
-            CG.push_back(cg);
+            CA_.push_back(dx / len);
+            CB_.push_back(dy / len);
+            CG_.push_back(dz / len);
         }
     }
-}
-
-// Bygg en enkel vertikal tråd längs z-axeln
-// med Nseg segment, längd L, radie a.
-// G = 1: fri rymd, G = 2: perfekt jordplan (ej utnyttjad i denna version).
-Geometry buildSimpleVerticalWire(int Nseg, double L, double a, int G = 1)
-{
-    Geometry g;
-    g.N = Nseg;
-    g.G = G;
-
-    int Nnodes = Nseg + 1;
-    g.X.assign(Nnodes + 1, 0.0);
-    g.Y.assign(Nnodes + 1, 0.0);
-    g.Z.assign(Nnodes + 1, 0.0);
-
-    double dz = L / Nseg;
-    for (int n = 1; n <= Nnodes; ++n) {
-        g.X[n] = 0.0;
-        g.Y[n] = 0.0;
-        g.Z[n] = (n - 1) * dz;
-    }
-
-    g.A.assign(Nseg + 1, a);
-    g.S.assign(Nseg + 1, dz);
-    g.CA.assign(Nseg + 1, 0.0);
-    g.CB.assign(Nseg + 1, 0.0);
-    g.CG.assign(Nseg + 1, 1.0); // längs z
-
-    g.C.assign(Nseg + 1, {0,0});
-    g.W.assign(Nseg + 1, 1);
-    g.J2.assign(2, {0,0}); // wire-index 1..1
-
-    // Puls I = segment I (1..Nseg)
-    for (int I = 1; I <= Nseg; ++I) {
-        g.C[I][0] = I;   // "nedre" segmentindex
-        g.C[I][1] = I;   // "övre" segmentindex (förenklat lika)
-        g.W[I]     = 1;  // alla pulser på tråd 1
-    }
-
-    g.J2[1][0] = 1;         // första nod på tråd 1
-    g.J2[1][1] = Nnodes;    // sista nod
-
-    return g;
 }
